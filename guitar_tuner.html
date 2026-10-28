@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>Guitar Tuner</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#172235;--panel2:#223149;--green:#4ade80;--muted:#a9b8cc;--red:#fb7185;--yellow:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#1c2d46,var(--bg) 60%);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#f8fafc;min-height:100vh;padding:18px}
+main{width:min(100%,520px);margin:0 auto}
+header{text-align:center;padding:14px 0 18px}
+.logo{font-size:42px}
+h1{margin:4px 0;color:var(--green);font-size:clamp(28px,7vw,38px)}
+.sub{margin:0;color:var(--muted);font-size:14px}
+.card{background:rgba(23,34,53,.96);border:1px solid #31425a;border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:0 16px 45px #0002}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.note{font-size:clamp(68px,18vw,100px);line-height:1.05;font-weight:800;text-align:center;margin:12px 0 4px}
+.freq{text-align:center;color:var(--muted);font-size:18px;font-variant-numeric:tabular-nums}
+.status{text-align:center;margin:14px 0 10px;font-weight:750;font-size:19px;color:var(--yellow)}
+.meter{height:12px;border-radius:99px;background:linear-gradient(90deg,#fb7185 0%,#facc15 35%,#4ade80 50%,#facc15 65%,#fb7185 100%);position:relative;margin:24px 8px 7px}
+.needle{position:absolute;width:4px;height:26px;border-radius:4px;background:#fff;left:50%;top:-7px;transform:translateX(-50%);box-shadow:0 0 0 2px #101827}
+.meter-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+button{font:inherit;border:0;border-radius:13px;padding:14px 16px;font-weight:750;cursor:pointer;min-height:48px}
+button:focus-visible{outline:3px solid white;outline-offset:3px}
+.primary{background:var(--green);color:#052e16;flex:1}
+.secondary{background:var(--panel2);color:#f8fafc}
+.buttons{display:flex;gap:10px;margin-top:18px}
+.message{text-align:center;color:var(--muted);font-size:13px;line-height:1.5;margin:14px 0 0}
+.strings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:14px}
+.string{background:var(--panel2);color:#fff;border:1px solid #40536d;padding:13px 5px;border-radius:14px}
+.string strong{display:block;font-size:24px}
+.string small{display:block;color:var(--muted);margin-top:3px}
+.string.active{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);background:#17402f}
+.string.done{border-color:#4ade8077}
+.help{color:var(--muted);font-size:14px;line-height:1.65}
+.help strong{color:#fff}
+footer{text-align:center;color:#73849b;font-size:12px;padding:4px 0 18px}
+@media(min-width:430px){.card{padding:24px}.strings{grid-template-columns:repeat(6,minmax(0,1fr))}.string strong{font-size:22px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo" aria-hidden="true">🎸</div>
+  <h1>Guitar Tuner</h1>
+  <p class="sub">Penyetem gitar • Standard tuning</p>
+</header>
+
+<section class="card" aria-live="polite">
+  <div class="eyebrow" style="text-align:center">Nada yang terdeteksi</div>
+  <div class="note" id="note">--</div>
+  <div class="freq" id="freq">— Hz</div>
+  <div class="status" id="status">Siap menyetem</div>
+  <div class="meter" aria-label="Indikator ketepatan nada"><div class="needle" id="needle"></div></div>
+  <div class="meter-labels"><span>Terlalu rendah</span><span>Tepat</span><span>Terlalu tinggi</span></div>
+  <div class="buttons">
+    <button class="primary" id="start">🎤 Mulai tuning</button>
+    <button class="secondary" id="stop" disabled>Berhenti</button>
+  </div>
+  <p class="message" id="message">Tekan Mulai tuning, izinkan mikrofon, lalu petik satu senar.</p>
+</section>
+
+<section class="card">
+  <div class="eyebrow">Pilih senar</div>
+  <div class="strings" id="strings">
+    <button class="string" data-index="0"><strong>E</strong><small>Senar 6 · 82 Hz</small></button>
+    <button class="string" data-index="1"><strong>A</strong><small>Senar 5 · 110 Hz</small></button>
+    <button class="string" data-index="2"><strong>D</strong><small>Senar 4 · 147 Hz</small></button>
+    <button class="string" data-index="3"><strong>G</strong><small>Senar 3 · 196 Hz</small></button>
+    <button class="string" data-index="4"><strong>B</strong><small>Senar 2 · 247 Hz</small></button>
+    <button class="string" data-index="5"><strong>E</strong><small>Senar 1 · 330 Hz</small></button>
+  </div>
+  <p class="message" id="target">Pilih senar untuk melihat nada targetnya.</p>
+</section>
+
+<section class="card">
+  <div class="eyebrow">Cara menggunakan</div>
+  <div class="help">
+    <p><strong>1.</strong> Letakkan HP dekat gitar di ruangan yang tenang.</p>
+    <p><strong>2.</strong> Tekan <strong>Mulai tuning</strong> dan izinkan akses mikrofon.</p>
+    <p><strong>3.</strong> Petik satu senar saja, lalu tunggu bunyi agak stabil.</p>
+    <p><strong>4.</strong> Jika nada terlalu rendah, kencangkan sedikit. Jika terlalu tinggi, kendurkan sedikit. Putar pasak perlahan.</p>
+    <p><strong>Urutan senar standar:</strong> E2 – A2 – D3 – G3 – B3 – E4, dari senar paling tebal ke paling tipis.</p>
+  </div>
+</section>
+<footer>Guitar Tuner • Versi awal • Mikrofon diproses langsung di perangkat</footer>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const notes = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+  const strings = [
+    {name:'E', octave:2, midi:40, hz:82.4069},
+    {name:'A', octave:2, midi:45, hz:110},
+    {name:'D', octave:3, midi:50, hz:146.832},
+    {name:'G', octave:3, midi:55, hz:195.998},
+    {name:'B', octave:3, midi:59, hz:246.942},
+    {name:'E', octave:4, midi:64, hz:329.628}
+  ];
+  let ctx=null, stream=null, analyser=null, source=null, raf=0, selected=null;
+  const bufferSize=8192;
+  function setMessage(s){$('message').textContent=s}
+  function stop(){
+    if(raf) cancelAnimationFrame(raf);
+    raf=0;
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=null;
+    if(source){try{source.disconnect()}catch(e){}}
+    source=null; analyser=null;
+    if(ctx){ctx.close().catch(()=>{});ctx=null}
+    $('start').disabled=false; $('stop').disabled=true;
+    $('status').textContent='Tuning berhenti';
+    setMessage('Tekan Mulai tuning untuk mencoba lagi.');
+  }
+  function pitch(buffer, sampleRate){
+    let rms=0;
+    for(let i=0;i<buffer.length;i++) rms+=buffer[i]*buffer[i];
+    rms=Math.sqrt(rms/buffer.length);
+    if(rms<0.012) return null;
+    // Remove DC offset to improve correlation.
+    let mean=0;
+    for(let i=0;i<buffer.length;i++) mean+=buffer[i];
+    mean/=buffer.length;
+    const minLag=Math.floor(sampleRate/370);
+    const maxLag=Math.min(Math.floor(sampleRate/70),buffer.length-2);
+    let bestLag=-1, best=-1;
+    for(let lag=minLag;lag<=maxLag;lag++){
+      let corr=0, a=0, b=0;
+      for(let i=0;i<buffer.length-lag;i++){
+        const x=buffer[i]-mean, y=buffer[i+lag]-mean;
+        corr+=x*y; a+=x*x; b+=y*y;
+      }
+      const score=corr/Math.sqrt((a*b)||1);
+      if(score>best){best=score;bestLag=lag}
+    }
+    if(bestLag<0 || best<0.55) return null;
+    // Parabolic interpolation around the best lag.
+    function corrAt(lag){
+      let c=0,a=0,b=0;
+      for(let i=0;i<buffer.length-lag;i++){
+        const x=buffer[i]-mean,y=buffer[i+lag]-mean;
+        c+=x*y;a+=x*x;b+=y*y;
+      }
+      return c/Math.sqrt((a*b)||1);
+    }
+    const left=bestLag>minLag?corrAt(bestLag-1):best;
+    const right=bestLag<maxLag?corrAt(bestLag+1):best;
+    const denom=2*(2*best-left-right);
+    const shift=Math.abs(denom)>1e-9?(right-left)/denom:0;
+    return sampleRate/(bestLag+Math.max(-0.5,Math.min(0.5,shift)));
+  }
+  function show(f){
+    if(!Number.isFinite(f)||f<70||f>370) return;
+    const midiFloat=69+12*Math.log2(f/440);
+    const midi=Math.round(midiFloat);
+    const cents=Math.round(100*(midiFloat-midi));
+    const noteName=notes[(midi%12+12)%12];
+    const octave=Math.floor(midi/12)-1;
+    $('note').textContent=noteName+octave;
+    $('freq').textContent=f.toFixed(1)+' Hz';
+    const clipped=Math.max(-50,Math.min(50,cents));
+    $('needle').style.left=(50+clipped)+'%';
+    if(Math.abs(cents)<=5){
+      $('status').textContent='✓ Nada tepat!';
+      $('status').style.color='var(--green)';
+    }else if(cents<0){
+      $('status').textContent='♭ Terlalu rendah ('+cents+' cents)';
+      $('status').style.color='var(--yellow)';
+    }else{
+      $('status').textContent='♯ Terlalu tinggi (+'+cents+' cents)';
+      $('status').style.color='var(--red)';
+    }
+    document.querySelectorAll('.string').forEach((el,i)=>{
+      el.classList.toggle('active', strings[i].midi===midi);
+      el.classList.toggle('done', strings[i].midi===midi && Math.abs(cents)<=5);
+    });
+  }
+  function loop(){
+    if(!analyser||!ctx) return;
+    const b=new Float32Array(bufferSize);
+    analyser.getFloatTimeDomainData(b);
+    const f=pitch(b,ctx.sampleRate);
+    if(f) show(f);
+    else {
+      $('status').textContent='Petik satu senar';
+      $('status').style.color='var(--yellow)';
+    }
+    raf=requestAnimationFrame(loop);
+  }
+  async function start(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      $('status').textContent='Mikrofon tidak tersedia';
+      setMessage('Buka aplikasi melalui alamat HTTPS di browser yang mendukung mikrofon.');
+      return;
+    }
+    $('start').disabled=true;
+    $('status').textContent='Meminta izin mikrofon…';
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:{
+        echoCancellation:false, noiseSuppression:false, autoGainControl:false
+      }});
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) throw new Error('Browser ini belum mendukung pemrosesan audio.');
+      ctx=new AC();
+      await ctx.resume();
+      analyser=ctx.createAnalyser();
+      analyser.fftSize=bufferSize;
+      analyser.smoothingTimeConstant=0;
+      source=ctx.createMediaStreamSource(stream);
+      source.connect(analyser);
+      $('stop').disabled=false;
+      $('status').textContent='Mendengarkan…';
+      setMessage('Petik satu senar. Hindari suara lain agar pembacaan lebih stabil.');
+      loop();
+    }catch(e){
+      if(stream) stream.getTracks().forEach(t=>t.stop());
+      stream=null; ctx=null; analyser=null; source=null;
+      $('start').disabled=false;
+      $('status').textContent='Mikrofon belum aktif';
+      setMessage(e.name==='NotAllowedError'
+        ?'Izin mikrofon ditolak. Ubah izin mikrofon untuk situs ini di pengaturan Chrome, lalu coba lagi.'
+        : (e.message||'Periksa izin mikrofon dan koneksi halaman HTTPS.'));
+    }
+  }
+  $('start').addEventListener('click',start);
+  $('stop').addEventListener('click',stop);
+  document.querySelectorAll('.string').forEach((el,i)=>{
+    el.addEventListener('click',()=>{
+      selected=i;
+      document.querySelectorAll('.string').forEach((b,j)=>b.classList.toggle('active',i===j));
+      const s=strings[i];
+      $('target').textContent='Target senar '+(6-i)+': '+s.name+s.octave+' • '+s.hz.toFixed(2)+' Hz';
+    });
+  });
+})();
+</script>
+</body>
+</html>
